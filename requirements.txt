@@ -1,0 +1,7 @@
+Flask==2.3.2
+ultralytics==8.4.0
+torch==2.2.0  # choose the CPU build compatible with Render; you can adjust if using GPU instance
+torchvision==0.15.2
+opencv-python-headless==4.8.0.74
+gunicorn==20.1.0
+Pillow==10.0.0
