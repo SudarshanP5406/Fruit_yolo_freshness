@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 import cv2
 import os
 import shutil
+import gdown  # ✅ for auto-download from Google Drive
 
 app = Flask(__name__)
 
@@ -13,8 +14,19 @@ RESULT_FOLDER = 'static/results'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(RESULT_FOLDER, exist_ok=True)
 
-# ======= MODEL =======
-MODEL_PATH = 'best (2).pt'
+# ======= MODEL DOWNLOAD + LOAD =======
+MODEL_PATH = 'best.pt'
+DRIVE_FILE_ID = "13B1-kTOYRkStX-Ityzm8OYjfF2YqIjMa"
+
+# Download model from Google Drive if not present
+if not os.path.exists(MODEL_PATH):
+    print("🔽 Downloading YOLO model from Google Drive...")
+    url = f"https://drive.google.com/uc?id={DRIVE_FILE_ID}"
+    gdown.download(url, MODEL_PATH, quiet=False)
+else:
+    print("✅ Model already exists locally.")
+
+# Load YOLO model
 model = YOLO(MODEL_PATH) if os.path.exists(MODEL_PATH) else None
 
 
@@ -25,7 +37,7 @@ def index():
     result_image = None
 
     if request.method == 'POST':
-        # Clear old images
+        # Clear old images before new upload
         for folder in [UPLOAD_FOLDER, RESULT_FOLDER]:
             shutil.rmtree(folder)
             os.makedirs(folder, exist_ok=True)
@@ -47,10 +59,16 @@ def index():
         results = model(img)
         annotated = results[0].plot()
 
+        # Save result image
         result_path = os.path.join(RESULT_FOLDER, f"result_{filename}")
         cv2.imwrite(result_path, annotated)
 
-        label = results[0].names[int(results[0].boxes.cls[0])] if len(results[0].boxes.cls) else "No detection"
+        # Extract label
+        label = (
+            results[0].names[int(results[0].boxes.cls[0])]
+            if len(results[0].boxes.cls)
+            else "No detection"
+        )
         result_image = result_path
 
     return render_template('index.html', label=label, result_image=result_image)
@@ -73,8 +91,10 @@ def generate_frames():
         _, buffer = cv2.imencode('.jpg', annotated)
         frame = buffer.tobytes()
 
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        yield (
+            b'--frame\r\n'
+            b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n'
+        )
 
 
 @app.route('/camera_feed')
