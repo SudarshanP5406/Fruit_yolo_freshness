@@ -4,3 +4,7 @@ __pycache__/
 venv/
 *.ckpt
 *.pt  # include this only if you don't want to commit model - see below
+*.h5
+*.keras
+/static/uploads/
+/static/results/
